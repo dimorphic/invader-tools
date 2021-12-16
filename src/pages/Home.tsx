@@ -24,6 +24,7 @@ export default function Home(): JSX.Element {
 	const [stakedVader, setStakedVader] = useState<BigNumber | null>(null)
 
 	const [coinGeckoStatistics, setCoinGeckoStatistics] = useState<null | {
+		marketCap: number
 		pricePerVader: number
 		totalSupply: number
 		circulatingSupply: number
@@ -43,6 +44,7 @@ export default function Home(): JSX.Element {
 			const coinGeckoStats = await (await fetch("https://api.coingecko.com/api/v3/coins/vader-protocol")).json()
 
 			setCoinGeckoStatistics({
+				marketCap: coinGeckoStats.market_data.market_cap.usd,
 				pricePerVader: coinGeckoStats.market_data.current_price.usd,
 				totalSupply: coinGeckoStats.market_data.total_supply,
 				circulatingSupply: coinGeckoStats.market_data.circulating_supply,
@@ -120,6 +122,10 @@ export default function Home(): JSX.Element {
 										<div className="card-header small text-muted">$VADER Price</div>
 										<div className="card-body text-center lead">${coinGeckoStatistics.pricePerVader}</div>
 									</div>
+									<div className="card mt-3">
+										<div className="card-header small text-muted">Market Cap</div>
+										<div className="card-body text-center lead">${numberFormatter.format(coinGeckoStatistics.marketCap)}</div>
+									</div>
 								</div>
 								<div className="col-md-4 col-lg-3">
 									<div className="card">
@@ -146,9 +152,7 @@ export default function Home(): JSX.Element {
 												<p className="small text-muted">{Math.round(removeDecimals(stakedVader).toNumber()/coinGeckoStatistics.circulatingSupply*100)} % of circulating</p>
 											</div>
 										) : (
-											<div className="card">
-												<div className="card-body text-center lead">Loading statistics...</div>
-											</div>
+											<div className="card-body text-center text-muted">{account ? "Loading statistics..." : "Connect wallet"}</div>
 										)}
 									</div>
 								</div>
