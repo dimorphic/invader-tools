@@ -1,0 +1,18 @@
+.navbar {
+    background: $navbar-bg;
+
+    .navbar-brand {
+        color: #fff !important;
+    }
+
+    .navbar-nav {
+        .nav-link {
+            color: #fff !important;
+        }
+
+        .dropdown-menu {
+            background: #000;
+            padding: 0;
+        }
+    }
+}

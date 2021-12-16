@@ -1,0 +1,51 @@
+@import "variables";
+
+@import "~bootstrap/scss/bootstrap";
+
+// Theme
+@import "themes/dark";
+
+// Typography
+@import "typography";
+
+// Components
+@import "components/index";
+
+body {
+    background: url("../img/bg.png") $body-bg no-repeat;
+    background-size: cover;
+    background-attachment: fixed;
+    background-position: center center;
+    color: $text-color;
+    font-family: "Sora", sans-serif;
+}
+
+main.content {
+    min-height: 50vh;
+    padding: 0 0 $space-md;
+}
+
+// Inputs
+label {
+    font-size: .9rem;
+    color: rgba(255, 255, 255, .75);
+    margin-bottom: .5rem;
+}
+
+.form-control {
+    background-color: #000;
+    color: #fff;
+    border-color: lighten(#111, 5%);
+
+    &:focus,
+    &:hover {
+        background-color: #000;
+        color: #fff;
+        border-color: lighten(#111, 5%);
+        box-shadow: none;
+    }
+}
+
+.bg-dark {
+    background-color: #000 !important;
+}
