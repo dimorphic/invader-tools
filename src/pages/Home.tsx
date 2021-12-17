@@ -5,15 +5,24 @@ import { useContract } from "../hooks/useContract"
 import Config from "../Config"
 import { BigNumber } from "ethers"
 import { getXVaderPrice } from "../common/graphql"
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
+import { useLocation } from "react-router-dom"
 
 import vaderABI from "../contracts/abis/vader.json"
 import xvaderABI from "../contracts/abis/xvader.json"
+import linearVestingABI from "../contracts/abis/linearVesting.json"
 import vaderLogo from "../assets/img/vader-logo.svg"
 
 export default function Home(): JSX.Element {
 	const { account } = useWeb3React()
 
-	const numberFormatter = new Intl.NumberFormat("en-GB")
+	const search = useLocation().search
+	const address = new URLSearchParams(search).get("address") || account
+
+	const numberFormatter = new Intl.NumberFormat("en-GB", {
+		minimumFractionDigits: 0,
+		maximumFractionDigits: 0,
+	})
 
 	const [vaderBalance, setVaderBalance] = useState<BigNumber | null>(null)
 	const [xvaderBalance, setXvaderBalance] = useState<BigNumber | null>(null)
@@ -22,6 +31,7 @@ export default function Home(): JSX.Element {
 	const [xvaderExchangeRate, setXvaderExchangeRate] = useState<BigNumber | null>(null)
 
 	const [stakedVader, setStakedVader] = useState<BigNumber | null>(null)
+	const [claimableVader, setClaimableVader] = useState<BigNumber | null>(null)
 
 	const [coinGeckoStatistics, setCoinGeckoStatistics] = useState<null | {
 		marketCap: number
@@ -35,6 +45,7 @@ export default function Home(): JSX.Element {
 	// contracts
 	const vaderContract = useContract(Config.addresses.vader, vaderABI)
 	const xvaderContract = useContract(Config.addresses.xvader, xvaderABI)
+	const linearVestingContract = useContract(Config.addresses.linearVesting, linearVestingABI)
 
 	const removeDecimals = (number: BigNumber) => number.div(BigNumber.from("10").pow("18"))
 
@@ -61,15 +72,19 @@ export default function Home(): JSX.Element {
 	}, [])
 
 	useEffect(() => {
-		if (account) {
+		if (address) {
 			// vader balance
 			(async () => {
 				if (vaderContract) {
-					setVaderBalance(await vaderContract.balanceOf(account))
+					setVaderBalance(await vaderContract.balanceOf(address))
 				}
 
 				if (xvaderContract) {
-					setXvaderBalance(await xvaderContract.balanceOf(account))
+					setXvaderBalance(await xvaderContract.balanceOf(address))
+				}
+
+				if (linearVestingContract) {
+					setClaimableVader(await linearVestingContract.getClaim(address))
 				}
 			})()
 		} else {
@@ -92,9 +107,13 @@ export default function Home(): JSX.Element {
 		if (null === vaderBalance || null === xvaderBalance || null === xvaderExchangeRate) {
 			setTotalXvaderBalance(BigNumber.from("0"))
 		} else {
-			setTotalXvaderBalance(vaderBalance.add(removeDecimals(xvaderBalance.mul(xvaderExchangeRate))))
+			setTotalXvaderBalance(
+				vaderBalance
+					.add(removeDecimals(xvaderBalance.mul(xvaderExchangeRate)))
+					.add(claimableVader || "0")
+			)
 		}
-	}, [vaderBalance, xvaderBalance, xvaderExchangeRate])
+	}, [vaderBalance, xvaderBalance, xvaderExchangeRate, claimableVader])
 
 	return (
 		<Default>
@@ -157,19 +176,43 @@ export default function Home(): JSX.Element {
 									</div>
 								</div>
 								<div className="col-md-4 col-lg-3">
-									<div className="card">
+									<div className="card text-start">
 										<div className="card-header small text-muted">Your $VADER Balance</div>
 										{account ? (
 											<>
 												<div className={"list-group list-group-flush"}>
 													{(totalXvaderBalance) ? (
-														<div className="list-group-item">Total: {numberFormatter.format(removeDecimals(totalXvaderBalance).toNumber())}</div>
+														<div className="list-group-item">Total: {numberFormatter.format(removeDecimals(totalXvaderBalance).toNumber())} {(coinGeckoStatistics.pricePerVader) && (
+															<span className={"small ms-2"}>(${numberFormatter.format(removeDecimals(totalXvaderBalance).toNumber()*coinGeckoStatistics.pricePerVader)})</span>
+														)}</div>
 													) : (
 														<div className="list-group-item">Total: Loading...</div>
 													)}
-													<div className="list-group-item small text-muted">Estimated Value: ${totalXvaderBalance ? numberFormatter.format(removeDecimals(totalXvaderBalance.mul(Math.round(coinGeckoStatistics.pricePerVader*1000)).div("1000")).toNumber()) : "Loading..."}</div>
-													<div className="list-group-item small text-muted">$VADER: {vaderBalance ? numberFormatter.format(removeDecimals(vaderBalance).toNumber()) : "Loading..."}</div>
-													<div className="list-group-item small text-muted">$xVADER: {xvaderBalance ? numberFormatter.format(removeDecimals(xvaderBalance).toNumber()) : "Loading..."}</div>
+													<div className="list-group-item small text-muted">$VADER: {vaderBalance ? numberFormatter.format(removeDecimals(vaderBalance).toNumber()) : "Loading..."}
+														{(vaderBalance && coinGeckoStatistics.pricePerVader) && (
+															<span className={"small ms-2"}>(${numberFormatter.format(removeDecimals(vaderBalance).toNumber()*coinGeckoStatistics.pricePerVader)})</span>
+														)}
+													</div>
+													<div className="list-group-item small text-muted">$xVADER: {xvaderBalance ? numberFormatter.format(removeDecimals(xvaderBalance).toNumber()) : "Loading..."}
+														{(xvaderBalance && coinGeckoStatistics.pricePerVader) && (
+															<span className={"small ms-2"}>(${numberFormatter.format(removeDecimals(xvaderBalance).toNumber()*coinGeckoStatistics.pricePerVader)})</span>
+														)}
+													</div>
+													<div className="list-group-item small text-muted">Claimable: {claimableVader ? numberFormatter.format(removeDecimals(claimableVader).toNumber()) : "Loading..."}
+														{(claimableVader && coinGeckoStatistics.pricePerVader) && (
+															<span className={"small ms-2"}>(${numberFormatter.format(removeDecimals(claimableVader).toNumber()*coinGeckoStatistics.pricePerVader)})</span>
+														)}
+														{claimableVader && claimableVader.gt("0") && (
+															<>
+																<p className={"mt-1"}>
+																	<a href="https://www.vaderprotocol.app/acquire" target={"_blank"} className={"small"} rel="noreferrer">
+																		Claim Now{" "}
+																		<FontAwesomeIcon icon={"external-link-alt"} />
+																	</a>
+																</p>
+															</>
+														)}
+													</div>
 												</div>
 											</>
 										) : (
