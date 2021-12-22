@@ -11,6 +11,8 @@ import { useLocation } from "react-router-dom"
 import vaderABI from "../contracts/abis/vader.json"
 import xvaderABI from "../contracts/abis/xvader.json"
 import linearVestingABI from "../contracts/abis/linearVesting.json"
+import vaderBondABI from "../contracts/abis/vaderBond.json"
+
 import vaderLogo from "../assets/img/vader-logo.svg"
 
 export default function Home(): JSX.Element {
@@ -33,6 +35,9 @@ export default function Home(): JSX.Element {
 	const [stakedVader, setStakedVader] = useState<BigNumber | null>(null)
 	const [claimableVader, setClaimableVader] = useState<BigNumber | null>(null)
 
+	// Bond
+	const [pendingBondPayout, setPendingBondPayout] = useState<BigNumber | null>(null)
+
 	const [coinGeckoStatistics, setCoinGeckoStatistics] = useState<null | {
 		marketCap: number
 		pricePerVader: number
@@ -46,6 +51,7 @@ export default function Home(): JSX.Element {
 	const vaderContract = useContract(Config.addresses.vader, vaderABI)
 	const xvaderContract = useContract(Config.addresses.xvader, xvaderABI)
 	const linearVestingContract = useContract(Config.addresses.linearVesting, linearVestingABI)
+	const bondContract = useContract(Config.addresses.vaderBond, vaderBondABI)
 
 	const removeDecimals = (number: BigNumber) => number.div(BigNumber.from("10").pow("18"))
 
@@ -86,10 +92,16 @@ export default function Home(): JSX.Element {
 				if (linearVestingContract) {
 					setClaimableVader(await linearVestingContract.getClaim(address))
 				}
+
+				if (bondContract) {
+					setPendingBondPayout(await bondContract.pendingPayoutFor(address))
+				}
 			})()
 		} else {
 			setVaderBalance(null)
 			setXvaderBalance(null)
+			setClaimableVader(null)
+			setPendingBondPayout(null)
 		}
 	}, [account])
 
@@ -188,17 +200,22 @@ export default function Home(): JSX.Element {
 													) : (
 														<div className="list-group-item">Total: Loading...</div>
 													)}
-													<div className="list-group-item small text-muted">$VADER: {vaderBalance ? numberFormatter.format(removeDecimals(vaderBalance).toNumber()) : "Loading..."}
+													<div className="list-group-item small text-muted">$VADER:<br />{vaderBalance ? numberFormatter.format(removeDecimals(vaderBalance).toNumber()) : "Loading..."}
 														{(vaderBalance && coinGeckoStatistics.pricePerVader) && (
 															<span className={"small ms-2"}>(${numberFormatter.format(removeDecimals(vaderBalance).toNumber()*coinGeckoStatistics.pricePerVader)})</span>
 														)}
 													</div>
-													<div className="list-group-item small text-muted">$xVADER: {xvaderBalance ? numberFormatter.format(removeDecimals(xvaderBalance).toNumber()) : "Loading..."}
+													<div className="list-group-item small text-muted">$xVADER:<br />{xvaderBalance ? numberFormatter.format(removeDecimals(xvaderBalance).toNumber()) : "Loading..."}
 														{(xvaderBalance && coinGeckoStatistics.pricePerVader) && (
 															<span className={"small ms-2"}>(${numberFormatter.format(removeDecimals(xvaderBalance).toNumber()*coinGeckoStatistics.pricePerVader)})</span>
 														)}
 													</div>
-													<div className="list-group-item small text-muted">Claimable: {claimableVader ? numberFormatter.format(removeDecimals(claimableVader).toNumber()) : "Loading..."}
+													<div className="list-group-item small text-muted">Claimable Bond Payout:<br />{pendingBondPayout ? numberFormatter.format(removeDecimals(pendingBondPayout).toNumber()) : "Loading..."}
+														{(pendingBondPayout && coinGeckoStatistics.pricePerVader) && (
+															<span className={"small ms-2"}>(${numberFormatter.format(removeDecimals(pendingBondPayout).toNumber()*coinGeckoStatistics.pricePerVader)})</span>
+														)}
+													</div>
+													<div className="list-group-item small text-muted">Claimable (VETH):<br />{claimableVader ? numberFormatter.format(removeDecimals(claimableVader).toNumber()) : "Loading..."}
 														{(claimableVader && coinGeckoStatistics.pricePerVader) && (
 															<span className={"small ms-2"}>(${numberFormatter.format(removeDecimals(claimableVader).toNumber()*coinGeckoStatistics.pricePerVader)})</span>
 														)}
